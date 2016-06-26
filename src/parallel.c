@@ -27,22 +27,23 @@ int main(int argc, char *argv[]){
 	int omp_rank;
 	MPI_Status status;
 	int* x;
-	int y = ROWS/omp_get_thread_num();;
 
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &proc_n);
-	if (my_rank == 0) {
-		populate_matrix();
-	}
-	else{
-            MPI_Recv(x, COLUMNS*y,
-                     MPI_INT, 0, MPI_ANY_TAG,
-                     MPI_COMM_WORLD, &status);
-		#pragma omp parallel private(omp_rank)
-		{
-			omp_rank=omp_get_thread_num();
-			printf("%d %d \n",my_rank,omp_rank);
+	#pragma omp parallel shared(my_rank) private(omp_rank)
+	{
+		omp_rank=omp_get_thread_num();
+		/*int y = ROWS/omp_get_thread_num();*/
+		if (my_rank == 0) {
+			populate_matrix();
+			printf("master -> rank: %d thread: %d \n",my_rank,omp_rank);
+		}
+		else{
+			/*MPI_Recv(x, COLUMNS,*/
+					/*MPI_INT, 0, MPI_ANY_TAG,*/
+					/*MPI_COMM_WORLD, &status);*/
+			printf("slave -> rank: %d thread: %d \n",my_rank,omp_rank);
 		}
 	}
 	MPI_Finalize();
