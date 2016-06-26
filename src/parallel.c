@@ -45,6 +45,7 @@ int main(int argc, char *argv[]){
 	if (my_rank == 0){
 		int work_sent = ROWS;
 		int work_received = ROWS;
+		int work_size = ((proc_n - 1)*COLUMNS)/ROWS;
 		populate_matrix();
 
 		while(work_received > 0) {
@@ -59,6 +60,7 @@ int main(int argc, char *argv[]){
 						MPI_COMM_WORLD, &status);
 				printf("Process number: %d -> ", i);
 				print_array(matrix[i]);
+				printf("Process number: %d -> ", i);
 				print_array(matrix[i+1]);
 				printf("\n");
 			}
