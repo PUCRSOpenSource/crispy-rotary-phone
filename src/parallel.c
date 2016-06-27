@@ -7,6 +7,7 @@
 #define ROWS 24
 #define SUICIDE_TAG 2
 #define WORK_TAG 1
+#define THREADS 8
 
 int matrix[ROWS][COLUMNS];
 
@@ -59,16 +60,16 @@ int main(int argc, char *argv[]){
 		populate_matrix();
 		while(work_sent < ROWS) {
 				for (i = 0; i < proc_n - 1 && work_sent < ROWS; ++i){
-						MPI_Send(matrix[work_sent], 8*COLUMNS,
+						MPI_Send(matrix[work_sent], THREADS*COLUMNS,
 										MPI_INT, i+1, WORK_TAG,
 										MPI_COMM_WORLD);
-						work_sent+=8;
+						work_sent+=THREADS;
 				}
 				for (i = 0; i < proc_n - 1 && work_received < ROWS; ++i) {
-						MPI_Recv(matrix[work_received], 8*COLUMNS,
+						MPI_Recv(matrix[work_received], THREADS*COLUMNS,
 										MPI_INT, i+1, WORK_TAG,
 										MPI_COMM_WORLD, &status);
-						work_received+=8;
+						work_received+=THREADS;
 				}
 		}	
 		int terminator = proc_n;
@@ -79,8 +80,8 @@ int main(int argc, char *argv[]){
 	}
 	else{
 		while(1) {
-				int work_pool[8][COLUMNS];
-				MPI_Recv(work_pool, 8*COLUMNS,
+				int work_pool[THREADS][COLUMNS];
+				MPI_Recv(work_pool, THREADS*COLUMNS,
 								MPI_INT, 0, MPI_ANY_TAG,
 								MPI_COMM_WORLD, &status);
 
@@ -89,11 +90,11 @@ int main(int argc, char *argv[]){
 						return 0;
 				}
 				#pragma omp parallel for
-				for (i = 0; i < 8; ++i) {
+				for (i = 0; i < THREADS; ++i) {
 						qsort(work_pool[i], COLUMNS, sizeof(int), compare);
 				}
 				#pragma omp barrier
-				MPI_Send(work_pool, 8*COLUMNS,
+				MPI_Send(work_pool, THREADS*COLUMNS,
 								MPI_INT, 0, WORK_TAG,
 								MPI_COMM_WORLD);
 		}
