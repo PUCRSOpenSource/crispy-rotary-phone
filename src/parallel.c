@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define COLUMNS 10
-#define ROWS 8
+#define COLUMNS 100
+#define ROWS 4
 #define SUICIDE_TAG 2
 #define WORK_TAG 1
 
@@ -30,11 +30,12 @@ void print_array(int array[]) {
 	}
 	printf("\n");
 }
+
 void print_matrix()
 {
 	int i,j;
 	for (i = 0; i < ROWS; ++i) {
-		for (j = 0; j < 10; ++j) {
+		for (j = 0; j < 30; ++j) {
 			printf("%d ", matrix[i][j]);
 		}
 		printf("\n");
@@ -46,47 +47,40 @@ int main(int argc, char *argv[]){
 	int proc_n;
 	int omp_rank;
 	int i;
-	int threads = omp_get_max_threads();
 	MPI_Status status;
 
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &proc_n);
 
-	if (my_rank == 0){
-		int work_sent = ROWS - threads ;
-		int work_received = ROWS -  threads;
-		populate_matrix();
+	int work_size = ROWS * COLUMNS/(proc_n - 1);
 
-		while(work_received > 0) {
-			for (i = 1; i < proc_n && work_sent >= 0; ++i, work_sent-= threads) {
-				MPI_Send(matrix[work_sent], COLUMNS * threads,
-						MPI_INT, i, WORK_TAG,
-						MPI_COMM_WORLD);
-			}
-			for (i = 1; i < proc_n && work_received >= 0; ++i, work_received-= threads) {
-				MPI_Recv(matrix[work_received], COLUMNS* threads,
-						MPI_INT, i, WORK_TAG,
-						MPI_COMM_WORLD, &status);
-				printf("Process number: %d -> ", i);
-				print_array(matrix[i]);
-				printf("Process number: %d -> ", i);
-				print_array(matrix[i+1]);
-				printf("\n");
-			}
+	if (my_rank == 0){
+		populate_matrix();
+		for (i = 0; i < proc_n - 1; ++i){
+			printf("work_size %d\n", work_size);
+			printf("matrix(%d)+i(%d)*work_size(%d): %d\n", matrix, i, work_size, matrix+(i*work_size));
+			MPI_Send(matrix+(i*work_size), work_size,
+					MPI_INT, i+1, WORK_TAG,
+					MPI_COMM_WORLD);
+		}
+		for (i = 0; i < proc_n - 1; ++i) {
+			MPI_Recv(matrix+(i*work_size), work_size,
+					MPI_INT, i+1, WORK_TAG,
+					MPI_COMM_WORLD, &status);
 		}
 
 		int terminator = proc_n;
 		while (--terminator) {
 			MPI_Send(0, 0, MPI_INT, terminator,
 					SUICIDE_TAG, MPI_COMM_WORLD);
-			
+
 		}
 		print_matrix();
 	}
 	else{
-		int work_pool[(proc_n-1)][COLUMNS];
-		MPI_Recv(work_pool, COLUMNS * threads,
+		int work_pool[ROWS/(proc_n-1)][COLUMNS];
+		MPI_Recv(work_pool, work_size,
 				MPI_INT, 0, MPI_ANY_TAG,
 				MPI_COMM_WORLD, &status);
 
@@ -94,13 +88,16 @@ int main(int argc, char *argv[]){
 			MPI_Finalize();
 			return 0;
 		}
-		#pragma omp parallel shared(work_pool, my_rank) private(omp_rank)
-		{
-			omp_rank=omp_get_thread_num();
-			qsort(work_pool[omp_rank], COLUMNS, sizeof(int), compare);
+		printf("row to sort: %d\n", work_size/COLUMNS);
+		#pragma omp parallel for
+		for (i = 0; i < ROWS/proc_n; ++i) {
+			qsort(work_pool[i], COLUMNS, sizeof(int), compare);
+			printf("print array: \n");
+			print_array(work_pool[i]);
 		}
 		#pragma omp barrier
-		MPI_Send(work_pool, COLUMNS* threads,
+		printf("send!!!\n");
+		MPI_Send(work_pool, work_size,
 				MPI_INT, 0, WORK_TAG,
 				MPI_COMM_WORLD);
 	}
