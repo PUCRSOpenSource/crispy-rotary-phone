@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #define COLUMNS 100
-#define ROWS 16
+#define ROWS 24
 #define SUICIDE_TAG 2
 #define WORK_TAG 1
 
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]){
 					MPI_COMM_WORLD);
 			work+=8;
 		}
-		for (i = 0; i < proc_n - 1 && work > 0; ++i) {
+		for (i = 0, work = 0; i < proc_n - 1 && work < ROWS; ++i) {
 			MPI_Recv(matrix[work], 8*COLUMNS,
 					MPI_INT, i+1, WORK_TAG,
 					MPI_COMM_WORLD, &status);
