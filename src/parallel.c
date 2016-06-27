@@ -56,16 +56,18 @@ int main(int argc, char *argv[]){
 
 	if (my_rank == 0){
 		populate_matrix();
-		for (i = 1; i < proc_n; ++i){
+		for (i = 0; i < proc_n - 1 && work < ROWS; ++i){
 			printf("i: %d\n", i);
-			MPI_Send(matrix[i], 8*COLUMNS,
-					MPI_INT, i, WORK_TAG,
+			MPI_Send(matrix[work], 8*COLUMNS,
+					MPI_INT, i+1, WORK_TAG,
 					MPI_COMM_WORLD);
+			work+=8;
 		}
-		for (i = 1; i < proc_n; ++i) {
-			MPI_Recv(matrix[i], 8*COLUMNS,
-					MPI_INT, i, WORK_TAG,
+		for (i = 0; i < proc_n - 1 && work > 0; ++i) {
+			MPI_Recv(matrix[work], 8*COLUMNS,
+					MPI_INT, i+1, WORK_TAG,
 					MPI_COMM_WORLD, &status);
+			work+=8;
 		}
 
 		int terminator = proc_n;
