@@ -45,28 +45,27 @@ int main(int argc, char *argv[]){
 	int my_rank;
 	int proc_n;
 	int omp_rank;
-	MPI_Status status;
-	int* x;
 	int i;
+	int threads = omp_get_max_threads();
+	MPI_Status status;
 
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &proc_n);
 
 	if (my_rank == 0){
-		int work_sent = ROWS -2 ;
-		int work_received = ROWS - 2;
-		int work_size = ((proc_n - 1)*COLUMNS)/ROWS;
+		int work_sent = ROWS - threads ;
+		int work_received = ROWS -  threads;
 		populate_matrix();
 
 		while(work_received > 0) {
-			for (i = 1; i < proc_n && work_sent >= 0; ++i, work_sent-=2) {
-				MPI_Send(matrix[work_sent], COLUMNS*2,
+			for (i = 1; i < proc_n && work_sent >= 0; ++i, work_sent-= threads) {
+				MPI_Send(matrix[work_sent], COLUMNS * threads,
 						MPI_INT, i, WORK_TAG,
 						MPI_COMM_WORLD);
 			}
-			for (i = 1; i < proc_n && work_received >= 0; ++i, work_received-=2) {
-				MPI_Recv(matrix[work_received], COLUMNS*2,
+			for (i = 1; i < proc_n && work_received >= 0; ++i, work_received-= threads) {
+				MPI_Recv(matrix[work_received], COLUMNS* threads,
 						MPI_INT, i, WORK_TAG,
 						MPI_COMM_WORLD, &status);
 				printf("Process number: %d -> ", i);
@@ -87,7 +86,7 @@ int main(int argc, char *argv[]){
 	}
 	else{
 		int work_pool[(proc_n-1)][COLUMNS];
-		MPI_Recv(work_pool, COLUMNS*2,
+		MPI_Recv(work_pool, COLUMNS * threads,
 				MPI_INT, 0, MPI_ANY_TAG,
 				MPI_COMM_WORLD, &status);
 
@@ -101,7 +100,7 @@ int main(int argc, char *argv[]){
 			qsort(work_pool[omp_rank], COLUMNS, sizeof(int), compare);
 		}
 		#pragma omp barrier
-		MPI_Send(work_pool, COLUMNS*2,
+		MPI_Send(work_pool, COLUMNS* threads,
 				MPI_INT, 0, WORK_TAG,
 				MPI_COMM_WORLD);
 	}
