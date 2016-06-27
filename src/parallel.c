@@ -47,7 +47,8 @@ int main(int argc, char *argv[]){
 	int proc_n;
 	int omp_rank;
 	int i;
-	int work = 0;
+	int work_sent = 0;
+	int work_received = 0;
 	MPI_Status status;
 
 	MPI_Init(&argc, &argv);
@@ -56,20 +57,20 @@ int main(int argc, char *argv[]){
 
 	if (my_rank == 0){
 		populate_matrix();
-		for (i = 0; i < proc_n - 1 && work < ROWS; ++i){
-			printf("i: %d\n", i);
-			MPI_Send(matrix[work], 8*COLUMNS,
-					MPI_INT, i+1, WORK_TAG,
-					MPI_COMM_WORLD);
-			work+=8;
-		}
-		for (i = 0, work = 0; i < proc_n - 1 && work < ROWS; ++i) {
-			MPI_Recv(matrix[work], 8*COLUMNS,
-					MPI_INT, i+1, WORK_TAG,
-					MPI_COMM_WORLD, &status);
-			work+=8;
-		}
-
+		while(work_sent < ROWS) {
+				for (i = 0; i < proc_n - 1 && work_sent < ROWS; ++i){
+						MPI_Send(matrix[work_sent], 8*COLUMNS,
+										MPI_INT, i+1, WORK_TAG,
+										MPI_COMM_WORLD);
+						work_sent+=8;
+				}
+				for (i = 0; i < proc_n - 1 && work_received < ROWS; ++i) {
+						MPI_Recv(matrix[work_received], 8*COLUMNS,
+										MPI_INT, i+1, WORK_TAG,
+										MPI_COMM_WORLD, &status);
+						work_received+=8;
+				}
+		}	
 		int terminator = proc_n;
 		while (--terminator)
 			MPI_Send(0, 0, MPI_INT, terminator, SUICIDE_TAG, MPI_COMM_WORLD);
@@ -77,24 +78,25 @@ int main(int argc, char *argv[]){
 		print_matrix();
 	}
 	else{
-		int work_pool[8][COLUMNS];
-		MPI_Recv(work_pool, 8*COLUMNS,
-				MPI_INT, 0, MPI_ANY_TAG,
-				MPI_COMM_WORLD, &status);
+		while(1) {
+				int work_pool[8][COLUMNS];
+				MPI_Recv(work_pool, 8*COLUMNS,
+								MPI_INT, 0, MPI_ANY_TAG,
+								MPI_COMM_WORLD, &status);
 
-		if (status.MPI_TAG == SUICIDE_TAG) {
-			MPI_Finalize();
-			return 0;
+				if (status.MPI_TAG == SUICIDE_TAG) {
+						MPI_Finalize();
+						return 0;
+				}
+				#pragma omp parallel for
+				for (i = 0; i < 8; ++i) {
+						qsort(work_pool[i], COLUMNS, sizeof(int), compare);
+				}
+				#pragma omp barrier
+				MPI_Send(work_pool, 8*COLUMNS,
+								MPI_INT, 0, WORK_TAG,
+								MPI_COMM_WORLD);
 		}
-		#pragma omp parallel for
-		for (i = 0; i < 8; ++i) {
-			qsort(work_pool[i], COLUMNS, sizeof(int), compare);
-		}
-		#pragma omp barrier
-		printf("send!!!\n");
-		MPI_Send(work_pool, 8*COLUMNS,
-				MPI_INT, 0, WORK_TAG,
-				MPI_COMM_WORLD);
 	}
 	MPI_Finalize();
 }
