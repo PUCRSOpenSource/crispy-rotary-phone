@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define COLUMNS 100
-#define ROWS 24
+#define COLUMNS 100000
+#define ROWS 10000
 #define SUICIDE_TAG 2
 #define WORK_TAG 1
 #define THREADS 8
@@ -44,12 +44,15 @@ void print_matrix()
 }
 
 int main(int argc, char *argv[]){
+	double t1, t2; 
 	int my_rank;
 	int proc_n;
 	int omp_rank;
 	int i;
 	int work_sent = 0;
 	int work_received = 0;
+
+	t1 = MPI_Wtime(); 
 	MPI_Status status;
 
 	MPI_Init(&argc, &argv);
@@ -99,5 +102,7 @@ int main(int argc, char *argv[]){
 								MPI_COMM_WORLD);
 		}
 	}
+	t2 = MPI_Wtime(); 
 	MPI_Finalize();
+	printf( "Elapsed time is %f\n", t2 - t1 ); 
 }
