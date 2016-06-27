@@ -1,6 +1,7 @@
 #include <mpi.h>
 #include <omp.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define COLUMNS 10
 #define ROWS 8
@@ -29,6 +30,16 @@ void print_array(int array[]) {
 	}
 	printf("\n");
 }
+void print_matrix()
+{
+	int i,j;
+	for (i = 0; i < ROWS; ++i) {
+		for (j = 0; j < 10; ++j) {
+			printf("%d ", matrix[i][j]);
+		}
+		printf("\n");
+	}
+}
 
 int main(int argc, char *argv[]){
 	int my_rank;
@@ -43,19 +54,19 @@ int main(int argc, char *argv[]){
 	MPI_Comm_size(MPI_COMM_WORLD, &proc_n);
 
 	if (my_rank == 0){
-		int work_sent = ROWS;
-		int work_received = ROWS;
+		int work_sent = ROWS -2 ;
+		int work_received = ROWS - 2;
 		int work_size = ((proc_n - 1)*COLUMNS)/ROWS;
 		populate_matrix();
 
 		while(work_received > 0) {
-			for (i = 1; i < proc_n && work_sent > 0; ++i, work_sent-=2) {
-				MPI_Send(matrix[work_sent], COLUMNS*(proc_n-1),
+			for (i = 1; i < proc_n && work_sent >= 0; ++i, work_sent-=2) {
+				MPI_Send(matrix[work_sent], COLUMNS*2,
 						MPI_INT, i, WORK_TAG,
 						MPI_COMM_WORLD);
 			}
-			for (i = 1; i < proc_n && work_received > 0; ++i, work_received-=2) {
-				MPI_Recv(matrix[work_received], COLUMNS*(proc_n-1),
+			for (i = 1; i < proc_n && work_received >= 0; ++i, work_received-=2) {
+				MPI_Recv(matrix[work_received], COLUMNS*2,
 						MPI_INT, i, WORK_TAG,
 						MPI_COMM_WORLD, &status);
 				printf("Process number: %d -> ", i);
@@ -72,10 +83,11 @@ int main(int argc, char *argv[]){
 					SUICIDE_TAG, MPI_COMM_WORLD);
 			
 		}
+		print_matrix();
 	}
 	else{
 		int work_pool[(proc_n-1)][COLUMNS];
-		MPI_Recv(work_pool, COLUMNS*(proc_n-1),
+		MPI_Recv(work_pool, COLUMNS*2,
 				MPI_INT, 0, MPI_ANY_TAG,
 				MPI_COMM_WORLD, &status);
 
@@ -87,11 +99,9 @@ int main(int argc, char *argv[]){
 		{
 			omp_rank=omp_get_thread_num();
 			qsort(work_pool[omp_rank], COLUMNS, sizeof(int), compare);
-			printf("my_rank: %d omp_rank: %d\n", my_rank, omp_rank);
-			print_array(work_pool[omp_rank]);
 		}
 		#pragma omp barrier
-		MPI_Send(work_pool, COLUMNS,
+		MPI_Send(work_pool, COLUMNS*2,
 				MPI_INT, 0, WORK_TAG,
 				MPI_COMM_WORLD);
 	}
