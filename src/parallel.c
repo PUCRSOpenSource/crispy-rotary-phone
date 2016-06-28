@@ -10,6 +10,7 @@
 #define THREADS 8
 
 int matrix[ROWS][COLUMNS];
+int run_quick = 1;
 
 void populate_matrix() {
 	int i,j;
@@ -73,7 +74,7 @@ int main(int argc, char *argv[]){
 	int i;
 	int work_sent = 0;
 	int work_received = 0;
-
+	run_quick = atoi(argv[1]);
 	t1 = MPI_Wtime(); 
 	MPI_Status status;
 
@@ -116,7 +117,14 @@ int main(int argc, char *argv[]){
 				}
 				#pragma omp parallel for
 				for (i = 0; i < THREADS; ++i) {
+					if(run_quick){
+						printf("quick\n");
 						qsort(work_pool[i], COLUMNS, sizeof(int), compare);
+					}
+					else{
+						printf("bubble\n");
+						bubble_sort(COLUMNS, work_pool[i]);
+					}
 				}
 				#pragma omp barrier
 				MPI_Send(work_pool, THREADS*COLUMNS,
