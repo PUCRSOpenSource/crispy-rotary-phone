@@ -1,2 +1,7 @@
 \section{Análise dos Resultados}
 
+O programa foi executado utilizando 5 nodos, sendo 4 desses escravos, e com threads variando entre 2, 4, 8 e 16 e o algoritmo de ordenação Quicksort. Não foram observadas melhorias, o motivo disso seria a eficiência do algoritmo quicksort. A troca das mensagens é tão custosa, com as mensagens longas para enviar as matrizes, que a eficiência extra ganha na paralelização da ordenação não parece fazer diferença.
+
+O programa também foi comparado com o programa paralelo MPI puro, utilizando a mesma quantidade de nodos, que envia os vetores um por vez, onde novamente o custo de mandar as mensagens longas pesou. O programa híbrido executou em 39.713 segundos e o puro terminou em 23.897 segundos, e o grande culpado foi a troca de mensagem. Enviar uma mensagem maior ocupa o mestre por mais tempo, e a ordenação dos vetores é tão rápida que logo os escravos estão inativos novamente querendo conversar com o mestre enquanto o mestre está ocupado enviando.
+
+Uma situação onde provavelmente veríamos um ganho de desempenho utilizando o programa híbrido seria quando ordenássemos com o bubblesort. O bubblesort é mais pesado computacionalmente, e seria mais fácil notar a melhoria com o uso das threads OpenMP.

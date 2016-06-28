@@ -1,1 +1,3 @@
 \section{Modelo da Solução}
+
+Foi implementado um modelo mestre escravo paralelo, onde existem 1 mestre e 4 escravos, 1 escravo operando em cada nodo. Os escravos pedem para o mestre sacos de trabalho para ordenar e devolvem os vetores ordenados. A cada transferência, são enviados 8 vetores para o escravo ordenar, sendo esse número igual ao número maior de threads testadas. Ao receber a submatriz para ordenar, o escravo itera sobre os vetores paralelamente, utilizando o OpenMP, e quando terminada a ordenação, envia os vetores de volta para o mestre ordenados. Quando os escravos pedirem matrizes para ordenar, mas o trabalho estiver finalizado, o mestre vai enviar para os escravos uma mensagem para se suicidar, finalizando sua execução.
