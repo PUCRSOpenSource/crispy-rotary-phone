@@ -1,5 +1,5 @@
 
-## sequential.c
+## parallel.c
 ```c
 #include <mpi.h>
 #include <omp.h>
